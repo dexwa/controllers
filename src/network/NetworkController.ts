@@ -9,7 +9,7 @@ import {
   RPC,
   TESTNET_NETWORK_TYPE_TO_TICKER_SYMBOL,
 } from '../constants';
-import { RestrictedControllerMessenger } from 'src/ControllerMessenger';
+import { RestrictedControllerMessenger } from '../ControllerMessenger';
 
 /**
  * Human-readable network name
@@ -73,16 +73,16 @@ export type NetworkProperties = {
  */
 export type NetworkState = {
   network: string;
-  isCustomNetwork: boolean;
+  isCustomNetwork?: boolean;
   provider: ProviderConfig;
-  properties: NetworkProperties;
+  properties?: NetworkProperties;
 };
 
 const LOCALHOST_RPC_URL = 'http://localhost:8545';
 
 const name = 'NetworkController';
 
-type NetworkControllerMessenger = RestrictedControllerMessenger<
+export type NetworkControllerMessenger = RestrictedControllerMessenger<
   typeof name,
   any,
   any,
@@ -93,7 +93,7 @@ type NetworkControllerMessenger = RestrictedControllerMessenger<
 export type NetworkControllerOptions = {
   messenger: NetworkControllerMessenger;
   infuraProjectId?: string;
-  state?: NetworkState;
+  state?: Partial<NetworkState>;
 };
 
 const defaultState: NetworkState = {
@@ -313,7 +313,7 @@ export class NetworkController extends BaseController<
     // If testnet the ticker symbol should use a testnet prefix
     const ticker =
       type in TESTNET_NETWORK_TYPE_TO_TICKER_SYMBOL &&
-      TESTNET_NETWORK_TYPE_TO_TICKER_SYMBOL[type].length > 0
+        TESTNET_NETWORK_TYPE_TO_TICKER_SYMBOL[type].length > 0
         ? TESTNET_NETWORK_TYPE_TO_TICKER_SYMBOL[type]
         : 'ETH';
 
@@ -340,6 +340,7 @@ export class NetworkController extends BaseController<
     nickname?: string,
   ) {
     this.update((state: any) => {
+      state.provider.type = RPC;
       state.provider.rpcTarget = rpcTarget;
       state.provider.chainId = chainId;
       state.provider.ticker = ticker;
