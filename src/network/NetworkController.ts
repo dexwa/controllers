@@ -4,6 +4,7 @@ import createInfuraProvider from 'eth-json-rpc-infura/src/createProvider';
 import createMetamaskProvider from 'web3-provider-engine/zero';
 import { Mutex } from 'async-mutex';
 import { BaseController } from '../BaseControllerV2';
+import type { Patch } from 'immer';
 import {
   MAINNET,
   RPC,
@@ -82,12 +83,17 @@ const LOCALHOST_RPC_URL = 'http://localhost:8545';
 
 const name = 'NetworkController';
 
+type NetworkControllerEvent = {
+  type: `NetworkController:stateChange`;
+  payload: [NetworkState, Patch[]];
+};
+
 export type NetworkControllerMessenger = RestrictedControllerMessenger<
   typeof name,
   any,
-  any,
-  never,
-  any
+  NetworkControllerEvent,
+  string,
+  string
 >;
 
 export type NetworkControllerOptions = {

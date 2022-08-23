@@ -4,6 +4,7 @@ import HttpProvider from 'ethjs-provider-http';
 import { PreferencesController } from '../user/PreferencesController';
 import {
   NetworkController,
+  NetworkControllerMessenger,
   NetworksChainId,
 } from '../network/NetworkController';
 import { getFormattedIpfsUrl } from '../util';
@@ -17,6 +18,7 @@ import {
 
 import { AssetsContractController } from './AssetsContractController';
 import { CollectiblesController } from './CollectiblesController';
+import { ControllerMessenger } from '../ControllerMessenger';
 
 const CRYPTOPUNK_ADDRESS = '0xb47e3cd837dDF8e4c57F05d70Ab865de6e193BBB';
 const ERC721_KUDOSADDRESS = '0x2aEa4Add166EBf38b63d09a75dE1a7b94Aa24163';
@@ -33,6 +35,7 @@ const ERC721_DEPRESSIONIST_ID = '36';
 const MAINNET_PROVIDER = new HttpProvider(
   'https://mainnet.infura.io/v3/ad3a368836ff4596becc3be8e2f137ac',
 );
+const INFURA_PROJECT_ID = 'ad3a368836ff4596becc3be8e2f137ac';
 const OWNER_ADDRESS = '0x5a3CA5cD63807Ce5e4d7841AB32Ce6B6d9BbBa2D';
 const SECOND_OWNER_ADDRESS = '0x500017171kasdfbou081';
 
@@ -45,6 +48,7 @@ const DEPRESSIONIST_CLOUDFLARE_IPFS_SUBDOMAIN_PATH = getFormattedIpfsUrl(
   true,
 );
 
+let messenger: NetworkControllerMessenger;
 /**
  * Setup a test controller instance.
  *
@@ -55,11 +59,22 @@ const DEPRESSIONIST_CLOUDFLARE_IPFS_SUBDOMAIN_PATH = getFormattedIpfsUrl(
 function setupController({
   includeOnCollectibleAdded = false,
 }: { includeOnCollectibleAdded?: boolean } = {}) {
+  messenger = new ControllerMessenger().getRestricted({
+    name: 'NetworkController',
+    allowedEvents: [
+      'NetworkController:stateChange'
+    ],
+    allowedActions: [],
+  });
+
   const preferences = new PreferencesController();
-  const network = new NetworkController();
+  const network = new NetworkController({
+    messenger,
+    infuraProjectId: INFURA_PROJECT_ID
+  });
   const assetsContract = new AssetsContractController({
     onPreferencesStateChange: (listener) => preferences.subscribe(listener),
-    onNetworkStateChange: (listener) => network.subscribe(listener),
+    onNetworkStateChange: (listener) => messenger.subscribe('NetworkController:stateChange', listener),
   });
   const onCollectibleAddedSpy = includeOnCollectibleAdded
     ? jest.fn()
@@ -67,7 +82,8 @@ function setupController({
 
   const collectiblesController = new CollectiblesController({
     onPreferencesStateChange: (listener) => preferences.subscribe(listener),
-    onNetworkStateChange: (listener) => network.subscribe(listener),
+    onNetworkStateChange: (listener) =>
+      messenger.subscribe('NetworkController:stateChange', listener),
     getERC721AssetName: assetsContract.getERC721AssetName.bind(assetsContract),
     getERC721AssetSymbol:
       assetsContract.getERC721AssetSymbol.bind(assetsContract),
@@ -189,7 +205,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: '0x01',
@@ -204,7 +220,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibleContracts[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: '0x01',
@@ -308,7 +324,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: '0x01',
@@ -331,7 +347,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: '0x01',
@@ -370,7 +386,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibleContracts[selectedAddress][
-          chainId
+        chainId
         ],
       ).toHaveLength(1);
     });
@@ -382,7 +398,7 @@ describe('CollectiblesController', () => {
       await collectiblesController.addCollectible('0x01', '1');
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: '0x01',
@@ -518,7 +534,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: ERC721_KUDOSADDRESS,
@@ -534,7 +550,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibleContracts[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: ERC721_KUDOSADDRESS,
@@ -648,7 +664,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: ERC1155_COLLECTIBLE_ADDRESS,
@@ -768,7 +784,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: ERC721_KUDOSADDRESS,
@@ -783,7 +799,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibleContracts[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: ERC721_KUDOSADDRESS,
@@ -801,36 +817,24 @@ describe('CollectiblesController', () => {
         .stub(collectiblesController, 'getCollectibleInformation' as any)
         .returns({ name: 'name', image: 'url', description: 'description' });
 
-      network.update({
-        provider: {
-          type: firstNetworkType,
-          chainId: NetworksChainId[firstNetworkType],
-        },
-      });
-      await collectiblesController.addCollectible('0x01', '1234');
-      network.update({
-        provider: {
-          type: secondNetworkType,
-          chainId: NetworksChainId[secondNetworkType],
-        },
-      });
+      network.setProviderType(firstNetworkType);
 
-      network.update({
-        provider: {
-          type: firstNetworkType,
-          chainId: NetworksChainId[firstNetworkType],
-        },
-      });
+      // do we need to set time out??
+
+      await collectiblesController.addCollectible('0x01', '1234');
+
+      network.setProviderType(secondNetworkType);
+      network.setProviderType(firstNetworkType);
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress]?.[
-          NetworksChainId[secondNetworkType]
+        NetworksChainId[secondNetworkType]
         ],
       ).toBeUndefined();
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          NetworksChainId[firstNetworkType]
+        NetworksChainId[firstNetworkType]
         ][0],
       ).toStrictEqual({
         address: '0x01',
@@ -879,13 +883,13 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress]?.[
-          chainId
+        chainId
         ],
       ).toBeUndefined();
 
       expect(
         collectiblesController.state.allCollectibleContracts[selectedAddress]?.[
-          chainId
+        chainId
         ],
       ).toBeUndefined();
 
@@ -917,7 +921,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibleContracts[selectedAddress][
-          chainId
+        chainId
         ],
       ).toStrictEqual([
         {
@@ -1069,7 +1073,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibleContracts[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: '0x18E8E76aeB9E2d9FA2A2b88DD9CF3C8ED45c3660',
@@ -1079,7 +1083,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: '0x18E8E76aeB9E2d9FA2A2b88DD9CF3C8ED45c3660',
@@ -1223,7 +1227,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual({
         address: ERC721_COLLECTIBLE_ADDRESS,
@@ -1312,7 +1316,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibleContracts[selectedAddress][
-          chainId
+        chainId
         ],
       ).toHaveLength(0);
     });
@@ -1341,7 +1345,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibleContracts[selectedAddress][
-          chainId
+        chainId
         ],
       ).toHaveLength(1);
     });
@@ -1385,38 +1389,23 @@ describe('CollectiblesController', () => {
         .returns({ name: 'name', image: 'url', description: 'description' });
       const firstNetworkType = 'rinkeby';
       const secondNetworkType = 'ropsten';
-      network.update({
-        provider: {
-          type: firstNetworkType,
-          chainId: NetworksChainId[firstNetworkType],
-        },
-      });
+      network.setProviderType(firstNetworkType);
       await collectiblesController.addCollectible('0x02', '4321');
-      network.update({
-        provider: {
-          type: secondNetworkType,
-          chainId: NetworksChainId[secondNetworkType],
-        },
-      });
+      network.setProviderType(secondNetworkType);
       await collectiblesController.addCollectible('0x01', '1234');
       // collectiblesController.removeToken('0x01');
       collectiblesController.removeCollectible('0x01', '1234');
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          NetworksChainId[secondNetworkType]
+        NetworksChainId[secondNetworkType]
         ],
       ).toHaveLength(0);
 
-      network.update({
-        provider: {
-          type: firstNetworkType,
-          chainId: NetworksChainId[firstNetworkType],
-        },
-      });
+      network.setProviderType(firstNetworkType);
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          NetworksChainId[firstNetworkType]
+        NetworksChainId[firstNetworkType]
         ][0],
       ).toStrictEqual({
         address: '0x02',
@@ -1655,7 +1644,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual(
         expect.objectContaining({
@@ -1683,7 +1672,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual(
         expect.objectContaining({
@@ -1701,7 +1690,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual(
         expect.objectContaining({
@@ -1729,7 +1718,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual(
         expect.objectContaining({
@@ -1752,7 +1741,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual(
         expect.objectContaining({
@@ -1782,7 +1771,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual(
         expect.objectContaining({
@@ -1805,7 +1794,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual(
         expect.objectContaining({
@@ -2008,12 +1997,7 @@ describe('CollectiblesController', () => {
         const secondNetworkType = 'ropsten';
 
         preferences.update({ selectedAddress: OWNER_ADDRESS });
-        network.update({
-          provider: {
-            type: firstNetworkType,
-            chainId: NetworksChainId[firstNetworkType],
-          },
-        });
+        network.setProviderType(firstNetworkType);
 
         const { selectedAddress, chainId } = collectiblesController.config;
         const collectible = {
@@ -2043,12 +2027,7 @@ describe('CollectiblesController', () => {
           .returns(false);
 
         preferences.update({ selectedAddress: SECOND_OWNER_ADDRESS });
-        network.update({
-          provider: {
-            type: secondNetworkType,
-            chainId: NetworksChainId[secondNetworkType],
-          },
-        });
+        network.setProviderType(secondNetworkType);
 
         await collectiblesController.checkAndUpdateSingleCollectibleOwnershipStatus(
           collectible,
@@ -2150,7 +2129,7 @@ describe('CollectiblesController', () => {
 
       expect(
         collectiblesController.state.allCollectibles[selectedAddress][
-          chainId
+        chainId
         ][0],
       ).toStrictEqual(expectedMockCollectible);
     });
