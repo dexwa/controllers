@@ -69,15 +69,15 @@ export type SuggestedAssetMetaBase = {
  */
 export type SuggestedAssetMeta =
   | (SuggestedAssetMetaBase & {
-      status: SuggestedAssetStatus.failed;
-      error: Error;
-    })
+    status: SuggestedAssetStatus.failed;
+    error: Error;
+  })
   | (SuggestedAssetMetaBase & {
-      status:
-        | SuggestedAssetStatus.accepted
-        | SuggestedAssetStatus.rejected
-        | SuggestedAssetStatus.pending;
-    });
+    status:
+    | SuggestedAssetStatus.accepted
+    | SuggestedAssetStatus.rejected
+    | SuggestedAssetStatus.pending;
+  });
 
 /**
  * @type TokensState
@@ -531,7 +531,7 @@ export class TokensController extends BaseController<
       return Promise.resolve(false);
     }
 
-    const tokenContract = await this._createEthersContract(
+    const tokenContract = this._createEthersContract(
       tokenAddress,
       abiERC721,
       this.ethersProvider,
@@ -547,12 +547,12 @@ export class TokensController extends BaseController<
     }
   }
 
-  async _createEthersContract(
+  _createEthersContract(
     tokenAddress: string,
     abi: string,
     ethersProvider: any,
-  ): Promise<any> {
-    const tokenContract = await new ethers.Contract(
+  ): any {
+    const tokenContract = new ethers.Contract(
       tokenAddress,
       abi,
       ethersProvider,
@@ -636,7 +636,9 @@ export class TokensController extends BaseController<
       switch (suggestedAssetMeta.type) {
         case 'ERC20':
           const { address, symbol, decimals, image } = suggestedAssetMeta.asset;
+          console.log("ADDING A TOKEN");
           await this.addToken(address, symbol, decimals, image);
+          console.log("FINISHED ADDING A TOKEN");
           suggestedAssetMeta.status = SuggestedAssetStatus.accepted;
           this.hub.emit(
             `${suggestedAssetMeta.id}:finished`,
