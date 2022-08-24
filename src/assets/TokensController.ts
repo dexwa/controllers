@@ -531,7 +531,7 @@ export class TokensController extends BaseController<
       return Promise.resolve(false);
     }
 
-    const tokenContract = await this._createEthersContract(
+    const tokenContract = this._createEthersContract(
       tokenAddress,
       abiERC721,
       this.ethersProvider,
@@ -547,12 +547,13 @@ export class TokensController extends BaseController<
     }
   }
 
-  async _createEthersContract(
+  _createEthersContract(
     tokenAddress: string,
     abi: string,
     ethersProvider: any,
-  ): Promise<any> {
-    const tokenContract = await new ethers.Contract(
+  ): ethers.Contract {
+    console.log(ethersProvider);
+    const tokenContract = new ethers.Contract(
       tokenAddress,
       abi,
       ethersProvider,
