@@ -1426,10 +1426,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@metamask/contract-metadata@npm:^1.35.0":
-  version: 1.35.0
-  resolution: "@metamask/contract-metadata@npm:1.35.0"
-  checksum: d2bbb8bff2e2ebd4104512dbf4b2900fffd1f03125673b0d3ac58dac0e3b324402fec7170229dfdb601635d6d7074e0755f139149b3dc8640ee4703c17eb2383
+"@metamask/contract-metadata@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "@metamask/contract-metadata@npm:2.2.0"
+  checksum: 31b94274c7c0a2d03377f3fa5e46574cde6607fd3a3b571cb7ffa4f7ce6dc90e2bfe2a4b2eb9eb4ebcd07cb7d6918da893356b699e91bc6e005b472ca7279370
   languageName: node
   linkType: hard
 
@@ -1443,7 +1443,7 @@ __metadata:
     "@keystonehq/metamask-airgapped-keyring": ^0.3.0
     "@lavamoat/allow-scripts": ^2.0.2
     "@metamask/auto-changelog": ^2.6.0
-    "@metamask/contract-metadata": ^1.35.0
+    "@metamask/contract-metadata": ^2.2.0
     "@metamask/eslint-config": ^9.0.0
     "@metamask/eslint-config-jest": ^9.0.0
     "@metamask/eslint-config-nodejs": ^9.0.0
